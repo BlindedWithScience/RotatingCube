@@ -6,13 +6,13 @@ const SIDE = 100;
 
 ctx.translate(canvas.width/2, canvas.height/2);
 
-let xAngle = 0;
-let yAngle = 0;
-let zAngle = 0;
+const sliderAngle = document.getElementById("Angle");
+const inputX = document.getElementById("x");
+const inputY = document.getElementById("y");
+const inputZ = document.getElementById("z");
 
-const xAngleSlider = document.getElementById("xAngle");
-const yAngleSlider = document.getElementById("yAngle");
-const zAngleSlider = document.getElementById("zAngle");
+let angle = sliderAngle.value;
+let axis = [inputX.value,inputY.value,inputZ.value];
 
 
 const cube = [
@@ -61,9 +61,15 @@ function vect2tensor(v){
 };
 
 
+function real2tensor(r){
+	return [r,0,0,0,0,0,0,0];
+};
+
+
 function tensor2vect(t){
 	return [t[1],t[2],t[3]];
 };
+
 
 
 function vectScale(v, s){
@@ -124,7 +130,7 @@ function geomProduct(t1, t2){
 	
 	const zero = [0,0,0,0,0,0,0,0];
 
-	if (t1 === zero || t2 === zero) {return zero;}
+	if (t1.every(isZero) || t2.every(isZero)) {return zero;}
 
 	const p0 = (t1[0] != 0) ?
 		[t1[0] * t2[0],
@@ -232,12 +238,13 @@ function basisRotate(vp, vb1, vb2, angle){
 	const b2 = vect2tensor(vb2);
 	const hangle = angle/2;
 
-	const m1 = tensorScale(p, Math.cos(hangle) ** 2);
-	const m2 = tensorScale(geomProduct(p, geomProduct(b1,b2)), Math.sin(hangle) * Math.cos(hangle));
-	const m3 = tensorScale(geomProduct(geomProduct(b1,b2), p), Math.sin(hangle) * Math.cos(hangle));
-	const m4 = tensorScale(geomProduct(geomProduct(geomProduct(geomProduct(b1,b2),p), b1), b2), Math.sin(hangle) ** 2);
+	const cos = real2tensor(Math.cos(hangle));
+	const rotor = tensorScale(geomProduct(b1,b2), Math.sin(hangle));
+	
+	const m1 = tensorSub(cos, rotor);
+	const m2 = tensorSum(cos, rotor);
 
-	const result = tensorSub(tensorSub(tensorSum(m1, m2), m3), m4);
+	const result = geomProduct(m1, geomProduct(p,m2));
 
 	return tensor2vect(result);
 };
@@ -262,26 +269,11 @@ function cloudRotate(cloud, axis, angle){
 	}
 
 	return rotated;
-}
-
-
-function xRotate (cloud, angle){
-	return cloudRotate(cloud, [1,0,0], angle);
 };
 
 
-function yRotate (cloud, angle){
-	return cloudRotate(cloud, [0,1,0], angle);
-};
-
-
-function zRotate (cloud, angle){
-	return cloudRotate(cloud, [0,0,1], angle);
-};
-
-
-function calcVertices(points, xAngle, yAngle, zAngle){
-	const rotated = zRotate(yRotate(xRotate(points, xAngle), yAngle), zAngle);
+function calcVertices(cloud, axis, angle){
+	const rotated = cloudRotate(cloud, axis, angle);
 
 	const resVert = [];
 	for (let point of rotated){
@@ -311,35 +303,43 @@ function draw (vertices, sides){
 };
 
 
-function drawCube(xAngle, yAngle, zAngle){
-	const vertices = calcVertices(cube, xAngle, yAngle, zAngle);
-	draw(vertices, cubeSides);
+function drawFigure(vertices, sides, axis, angle){
+    const newVertices = calcVertices(vertices, axis, angle);
+    draw(newVertices, sides);
 };
 
 
 function isZero(n){
-	return n === 0;
+    return n === 0;
 };
 
 
-xAngleSlider.oninput = (data) => {
-    xAngle = data.target.value;
+sliderAngle.oninput = (data) => {
+    angle = data.target.value;
     clear();
-    drawCube(xAngle, yAngle, zAngle);
+    drawFigure(cube, cubeSides, axis, angle);
 };
 
-yAngleSlider.oninput = (data) => {
-    yAngle = data.target.value;
+
+inputX.oninput = (data) => {
+    axis = [data.target.value, axis[1], axis[2]];
     clear();
-    drawCube(xAngle, yAngle, zAngle);
+    drawFigure(cube, cubeSides, axis, angle);
 };
 
 
-zAngleSlider.oninput = (data) => {
-    zAngle = data.target.value;
+inputY.oninput = (data) => {
+    axis = [axis[0], data.target.value, axis[2]];
     clear();
-    drawCube(xAngle, yAngle, zAngle);
+    drawFigure(cube, cubeSides, axis, angle);
 };
 
 
-drawCube(xAngle, yAngle, zAngle);
+inputZ.oninput = (data) => {
+    axis = [axis[0], axis[1], data.target.value];
+    clear();
+    drawFigure(cube, cubeSides, axis, angle);
+};
+    
+
+drawFigure(cube, cubeSides, axis, angle);
