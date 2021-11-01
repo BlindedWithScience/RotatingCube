@@ -43,27 +43,6 @@ const cubeSides = [
 ];
 
 
-xAngleSlider.oninput = (data) => {
-    xAngle = data.target.value;
-    clear();
-    drawCube(xAngle, yAngle, zAngle);
-};
-
-
-yAngleSlider.oninput = (data) => {
-    yAngle = data.target.value;
-    clear();
-    drawCube(xAngle, yAngle, zAngle);
-};
-
-
-zAngleSlider.oninput = (data) => {
-    zAngle = data.target.value;
-    clear();
-    drawCube(xAngle, yAngle, zAngle);
-};
-
-
 function clear(){
     ctx.save();
 
@@ -89,6 +68,23 @@ function tensor2vect(t){
 
 function vectScale(v, s){
 	return [v[0] * s, v[1] * s, v[2] * s];
+};
+
+
+function vectLenght(v){
+	return (v[0] ** 2 + v[1] ** 2 + v[2] ** 2) ** 0.5
+};
+
+
+function vectNormalize(v){
+	return vectScale(v, 1/vectLenght(v));
+};
+
+
+function crossProduct(v1, v2){
+	return [v1[1] * v2[2] - v1[2] * v2[1],
+		-(v1[0] * v2[2] - v1[2] * v2[0]),
+		v1[0] * v2[1] - v1[1] * v2[0]];
 };
 
 
@@ -230,7 +226,7 @@ function geomProduct(t1, t2){
 };
 
 
-function rotate(vp, vb1, vb2, angle){
+function basisRotate(vp, vb1, vb2, angle){
 	const p = vect2tensor(vp);
 	const b1 = vect2tensor(vb1);
 	const b2 = vect2tensor(vb2);
@@ -247,47 +243,45 @@ function rotate(vp, vb1, vb2, angle){
 };
 
 
-function xRotate (points, angle){
-	const y = [0, 1, 0];
-	const z = [0, 0, 1];
-
-	const rotated = [];
-	for (let point of points){
-		rotated.push(rotate(point, z, y, angle));
+function arbRotate(point, axis, angle){
+	if (crossProduct(axis,point).every(isZero)) {
+		return point;
 	}
+	const b1 = vectNormalize(crossProduct(axis, point));
+	const b2 = vectNormalize(crossProduct(axis, b1));
 
-	return rotated;
+	return basisRotate(point, b1, b2, angle);
 };
 
 
-function yRotate (points, angle){
-	const x = [1, 0, 0];
-	const z = [0, 0, 1];
-
+function cloudRotate(cloud, axis, angle){
 	const rotated = [];
-	for (let point of points){
-		rotated.push(rotate(point, x, z, angle));
+
+	for (let point of cloud){
+		rotated.push(arbRotate(point, axis, angle));
 	}
 
 	return rotated;
+}
+
+
+function xRotate (cloud, angle){
+	return cloudRotate(cloud, [1,0,0], angle);
 };
 
 
-function zRotate (points, angle){
-	const y = [0, 1, 0];
-	const x = [1, 0, 0];
+function yRotate (cloud, angle){
+	return cloudRotate(cloud, [0,1,0], angle);
+};
 
-	const rotated = [];
-	for (let point of points){
-		rotated.push(rotate(point, y, x, angle));
-	}
 
-	return rotated;
+function zRotate (cloud, angle){
+	return cloudRotate(cloud, [0,0,1], angle);
 };
 
 
 function calcVertices(points, xAngle, yAngle, zAngle){
-	const rotated = zRotate(yRotate(xRotate(points, xAngle),yAngle), zAngle);
+	const rotated = zRotate(yRotate(xRotate(points, xAngle), yAngle), zAngle);
 
 	const resVert = [];
 	for (let point of rotated){
@@ -301,6 +295,7 @@ function calcVertices(points, xAngle, yAngle, zAngle){
 function connect(side, vertices){
     const p1 = side[0];
     const p2 = side[1];
+
     ctx.beginPath();
     ctx.moveTo(vertices[p1][0], vertices[p1][1]);
     ctx.lineTo(vertices[p2][0], vertices[p2][1]);
@@ -319,6 +314,32 @@ function draw (vertices, sides){
 function drawCube(xAngle, yAngle, zAngle){
 	const vertices = calcVertices(cube, xAngle, yAngle, zAngle);
 	draw(vertices, cubeSides);
-}
+};
+
+
+function isZero(n){
+	return n === 0;
+};
+
+
+xAngleSlider.oninput = (data) => {
+    xAngle = data.target.value;
+    clear();
+    drawCube(xAngle, yAngle, zAngle);
+};
+
+yAngleSlider.oninput = (data) => {
+    yAngle = data.target.value;
+    clear();
+    drawCube(xAngle, yAngle, zAngle);
+};
+
+
+zAngleSlider.oninput = (data) => {
+    zAngle = data.target.value;
+    clear();
+    drawCube(xAngle, yAngle, zAngle);
+};
+
 
 drawCube(xAngle, yAngle, zAngle);
