@@ -54,15 +54,15 @@ function clear(){
 };
 
 
+function isZero(n){
+    return n === 0;
+};
+
+
 // tensor - [0,0,0,0,0,0,0,0]
 
 function vect2tensor(v){
 	return [0,v[0],v[1],v[2],0,0,0,0];
-};
-
-
-function real2tensor(r){
-	return [r,0,0,0,0,0,0,0];
 };
 
 
@@ -77,13 +77,13 @@ function vectScale(v, s){
 };
 
 
-function vectLenght(v){
+function vectLength(v){
 	return (v[0] ** 2 + v[1] ** 2 + v[2] ** 2) ** 0.5
 };
 
 
 function vectNormalize(v){
-	return vectScale(v, 1/vectLenght(v));
+	return vectScale(v, 1/vectLength(v));
 };
 
 
@@ -125,14 +125,14 @@ function tensorScale(t, s){
 
 
 function geomProduct(t1, t2){
-	if (t1.lenght === 3){const t1 = vect2tensor(t1);};
-	if (t2.lenght === 3){const t2 = vect2tensor(t2);};
+	if (t1.length === 3){const t1 = vect2tensor(t1);};
+	if (t2.length === 3){const t2 = vect2tensor(t2);};
 	
 	const zero = [0,0,0,0,0,0,0,0];
 
 	if (t1.every(isZero) || t2.every(isZero)) {return zero;}
 
-	const p0 = (t1[0] != 0) ?
+	const p0 = (t1[0] !== 0) ?
 		[t1[0] * t2[0],
 		t1[0] * t2[1],
 		t1[0] * t2[2],
@@ -143,7 +143,7 @@ function geomProduct(t1, t2){
 		t1[0] * t2[7]]
 		: zero;
 
-	const p1 = (t1[1] != 0) ?
+	const p1 = (t1[1] !== 0) ?
 		[t1[1] * t2[1],
 		t1[1] * t2[0],
 		t1[1] * t2[4],
@@ -154,7 +154,7 @@ function geomProduct(t1, t2){
 		t1[1] * t2[6]]
 		: zero;
 
-	const p2 = (t1[2] != 0) ? 
+	const p2 = (t1[2] !== 0) ? 
 		[t1[2] * t2[2],
 		-(t1[2] * t2[4]),
 		t1[2] * t2[0],
@@ -165,7 +165,7 @@ function geomProduct(t1, t2){
 		-(t1[2] * t2[5])]
 		: zero;
 
-	const p3 = (t1[3] != 0) ?
+	const p3 = (t1[3] !== 0) ?
 		[t1[3] * t2[3],
 		-(t1[3] * t2[5]),
 		-(t1[3] * t2[6]),
@@ -176,7 +176,7 @@ function geomProduct(t1, t2){
 		t1[3] * t2[4]]
 		: zero;
 
-	const p4 = (t1[4] != 0) ?
+	const p4 = (t1[4] !== 0) ?
 		[-(t1[4] * t2[4]),
 		t1[4] * t2[2],
 		-(t1[4] * t2[1]),
@@ -187,7 +187,7 @@ function geomProduct(t1, t2){
 		t1[4] * t2[3]]
 		: zero;
 
-	const p5 = (t1[5] != 0) ?
+	const p5 = (t1[5] !== 0) ?
 		[-(t1[5] * t2[5]),
 		t1[5] * t2[3],
 		t1[5] * t2[7],
@@ -198,7 +198,7 @@ function geomProduct(t1, t2){
 		-(t1[5] * t2[2])]
 		: zero;
 
-	const p6 = (t1[6] != 0) ?
+	const p6 = (t1[6] !== 0) ?
 		[-(t1[6] * t2[6]),
 		-(t1[6] * t2[7]),
 		t1[6] * t2[3],
@@ -209,7 +209,7 @@ function geomProduct(t1, t2){
 		t1[6] * t2[1]]
 		: zero;
 
-	const p7 = (t1[7] != 0) ?
+	const p7 = (t1[7] !== 0) ?
 		[-(t1[7] * t2[7]),
 		-(t1[7] * t2[6]),
 		t1[7] * t2[5],
@@ -232,40 +232,37 @@ function geomProduct(t1, t2){
 };
 
 
-function basisRotate(vp, vb1, vb2, angle){
+function rotate(vp, plane, angle){
 	const p = vect2tensor(vp);
-	const b1 = vect2tensor(vb1);
-	const b2 = vect2tensor(vb2);
 	const hangle = angle/2;
 
-	const cos = real2tensor(Math.cos(hangle));
-	const rotor = tensorScale(geomProduct(b1,b2), Math.sin(hangle));
+	const cos = Math.cos(hangle);
+	const rotor = tensorScale(plane, Math.sin(hangle));
+	const nrotor = tensorScale(rotor, -1);
 	
-	const m1 = tensorSub(cos, rotor);
-	const m2 = tensorSum(cos, rotor);
+	rotor[0] = cos;
+	nrotor[0] = cos;
 
-	const result = geomProduct(m1, geomProduct(p,m2));
+	const result = geomProduct(nrotor, geomProduct(p,rotor));
 
 	return tensor2vect(result);
 };
 
 
-function arbRotate(point, axis, angle){
-	if (crossProduct(axis,point).every(isZero)) {
-		return point;
-	}
-	const b1 = vectNormalize(crossProduct(axis, point));
-	const b2 = vectNormalize(crossProduct(axis, b1));
+function findPlane(axis){
+	const naxis = vectNormalize(axis);
+	const plane = [0,0,0,0,naxis[2],-naxis[1],naxis[0],0];
 
-	return basisRotate(point, b1, b2, angle);
+	return plane;
 };
 
 
 function cloudRotate(cloud, axis, angle){
+	const plane = findPlane(axis);
 	const rotated = [];
 
 	for (let point of cloud){
-		rotated.push(arbRotate(point, axis, angle));
+		rotated.push(rotate(point, plane, angle));
 	}
 
 	return rotated;
@@ -306,11 +303,6 @@ function draw (vertices, sides){
 function drawFigure(vertices, sides, axis, angle){
     const newVertices = calcVertices(vertices, axis, angle);
     draw(newVertices, sides);
-};
-
-
-function isZero(n){
-    return n === 0;
 };
 
 
